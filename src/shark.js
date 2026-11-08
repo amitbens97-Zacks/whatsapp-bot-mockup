@@ -5,7 +5,7 @@ import { html, useState, useRef, useEffect, Icon, PencilCheck, cx, confetti, mon
 import { Button, Mark, SharkAvatar } from './components.js';
 import { Tag } from './ui.js';
 import { Phone, QrBox, SharkPic } from './phone.js';
-import { USER, SHARK_ASKS, SHARK_FALLBACK, SHARK_CONTACT, SHARK_CODE, PLANS, GENDER, g } from './data.js';
+import { USER, SHARK_ASKS, SHARK_SUPPORT, SHARK_DISTRESS, SHARK_FALLBACK, SHARK_CONTACT, SHARK_CODE, PLANS, GENDER, g } from './data.js';
 
 let seq = 500;
 const nextId = () => `s${++seq}`;
@@ -192,10 +192,20 @@ export function SharkChat({ shark, setShark, onBack }) {
     }, 1100);
   };
   const answerOf = (x) => (GENDER === 'f' && x.aF) || x.a;
+  // Free text: distress first, then an exact question, then the support keys.
   const free = (text) => {
-    const hit = SHARK_ASKS.find((x) => x.q === text);
+    const has = (keys) => keys.some((k) => text.includes(k));
+    if (has(SHARK_DISTRESS.keys)) return ask(text, SHARK_DISTRESS.a);
+    const hit = [...SHARK_ASKS, ...SHARK_SUPPORT].find((x) => x.q === text) || SHARK_SUPPORT.find((x) => has(x.keys));
     ask(text, hit ? answerOf(hit) : SHARK_FALLBACK);
   };
+  const tries = (list, tag) => html`<div class="flex flex-col gap-2">
+    ${list.map(
+      (x) => html`<button key=${x.q} type="button" class="lp-option !py-2" onClick=${() => ask(x.q, answerOf(x))}>
+        <span class="min-w-0 flex-1 text-[15px] font-semibold">${x.q}</span><${Tag}>${tag || x.from}<//>
+      </button>`,
+    )}
+  </div>`;
 
   return html`<div class="mx-auto grid h-full max-w-[1020px] gap-5 px-4 py-4 md:grid-cols-[320px_1fr] md:gap-10 md:px-8 md:py-6">
     <${Phone}
@@ -212,14 +222,11 @@ export function SharkChat({ shark, setShark, onBack }) {
       <button type="button" class="mb-2 flex w-fit items-center gap-1 text-[14px] font-bold text-muted hover:text-brand-600 cursor-pointer" onClick=${onBack}><${Icon} name="arrow-right" size=${16} />לדף הבית</button>
       <h1 class="fb-h2 mb-1">שיחה עם הכריש</h1>
       <p class="mb-3 text-[15px] text-muted">כך זה נראה בוואטסאפ של ${USER.firstName}. חלק מהדוגמאות מהמשך המסע, כשכבר יש לידים וכסף. אותו כריש כמו במערכת, עם אותם נתונים.</p>
-      <p class="mb-2 text-[14px] font-bold">אפשר לנסות:</p>
-      <div class="flex flex-col gap-2">
-        ${SHARK_ASKS.map(
-          (x) => html`<button key=${x.q} type="button" class="lp-option !py-2" onClick=${() => ask(x.q, answerOf(x))}>
-            <span class="min-w-0 flex-1 text-[15px] font-semibold">${x.q}</span><${Tag}>${x.from}<//>
-          </button>`,
-        )}
-      </div>
+      <p class="mb-2 text-[14px] font-bold">אפשר לנסות, על העסק:</p>
+      ${tries(SHARK_ASKS)}
+      <p class="mb-2 mt-4 text-[14px] font-bold">וגם כשקשה:</p>
+      ${tries(SHARK_SUPPORT, 'תמיכה')}
+      <p class="mt-2 text-[13px] text-muted">אפשר גם לכתוב בצ'אט במילים שלך, למשל "אני על סף להרים ידיים".</p>
       <p class="mt-4 flex items-start gap-2 text-[14px]"><span class="text-brand-600"><${Icon} name="info" size=${17} /></span>הכריש עונה רק כשכותבים לו. הוא לא שולח הודעות ביוזמתו, ולא מדבר עם הלידים.</p>
     </div>
   </div>`;
