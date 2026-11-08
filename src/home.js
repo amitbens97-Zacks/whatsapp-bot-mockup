@@ -1,8 +1,7 @@
 // The home page, only what this task changes on it: the "הלידים שלי" card now shows who
-// waits for an approval, a line about the bot, and a way back to the shark for whoever
-// skipped it after the payment.
+// waits for an approval, and a line about the bot.
 import { html, Icon, cx } from './lib.js';
-import { Button, SharkAvatar } from './components.js';
+import { Button } from './components.js';
 import { Tag } from './ui.js';
 import { USER, STEP } from './data.js';
 import { needsYou } from './leads.js';
@@ -52,14 +51,8 @@ export function Home({ state, go, onLead }) {
         <section class="fb-panel !p-4">
           <h2 class="fb-h3 mb-1 flex items-center gap-2"><span class=${cx('h-2.5 w-2.5 rounded-full', state.ended || !state.config.active ? 'bg-error' : 'bg-brand-600')}></span>הבוט של העסק</h2>
           <p class="mb-2 text-[14px]">${state.ended ? 'מושהה, המנוי הסתיים' : state.config.active ? `פעיל · ${auto === 1 ? 'הודעה אחת יצאה' : `${auto} הודעות יצאו`} לבד` : 'מושהה'}</p>
-          <${Button} variant="text" class="!h-auto !p-0" onClick=${() => go({ view: 'settings', tab: 'bot' })}>להגדרות הבוט<//>
+          <${Button} variant="text" class="!h-auto !p-0" onClick=${() => go({ view: 'settings' })}>להגדרות הבוט<//>
         </section>
-        ${!state.shark.connected &&
-        html`<section class="fb-panel !p-4">
-          <p class="mb-1 flex items-center gap-2"><${SharkAvatar} size=${34} /><b class="font-display text-[16px]">הכריש בוואטסאפ</b></p>
-          <p class="mb-2 text-[14px]">אפשר להוסיף אותו כמו איש קשר, ולשאול כל שאלה על העסק.</p>
-          <${Button} variant="mini" onClick=${() => go({ view: 'shark' })}>להוספה<//>
-        </section>`}
       </div>
     </div>
   </div>`;

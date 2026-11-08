@@ -1,7 +1,7 @@
 // All the mockup's data in one object, kept per browser tab and per demo user.
-import { GENDER, USER, OTHER_BUSINESS, startAnswers, FIRST_TEXT } from './data.js';
+import { GENDER, USER, OTHER_BUSINESS, HOLD_TEXT, startAnswers, FIRST_TEXT } from './data.js';
 
-const STORE = `flowbiz-wa-state-v1-${GENDER}`;
+const STORE = `flowbiz-wa-state-v2-${GENDER}`;
 let seq = 100;
 export const nextId = () => `m${++seq}`;
 
@@ -15,19 +15,20 @@ const lead = (o) => ({
 // Leads from before the bot sit in the same table (step 11, the landing page form).
 const seedLeads = () => [
   lead({
-    id: 'noa', name: 'נועה לוי', phone: '054-2223344', source: 'דף: ליווי 90 יום', status: 'מחכה לאישור', unread: 1, lastAt: 'אתמול 21:40',
+    id: 'noa', name: 'נועה לוי', phone: '054-2223344', source: 'דף: טיפול בחרדה', status: 'מחכה לאישור', unread: 1, lastAt: 'אתמול 21:40',
     msgs: [
       { id: 'n1', who: 'lead', text: FIRST_TEXT, t: 'אתמול 21:38' },
       { id: 'n2', who: 'bot', tag: 'opening', text: `היי נועה, כאן ${USER.business}, העסק של ${USER.fullName}. כרגע אנחנו מחוץ לשעות הפעילות (א׳ עד ה׳, 09:00 עד 17:00). ההודעה אצלי ואחזור אליך עוד היום.`, t: 'אתמול 21:38' },
-      { id: 'n3', who: 'lead', text: 'זה מתאים גם לקוסמטיקאית עם עובדת אחת?', t: 'אתמול 21:40' },
+      { id: 'n3', who: 'lead', text: 'זה מתאים גם לבן שלי, בן 16?', t: 'אתמול 21:40' },
+      { id: 'n4', who: 'bot', tag: 'hold', text: HOLD_TEXT, t: 'אתמול 21:40' },
     ],
     draft: {
       text: GENDER === 'f'
-        ? 'היי נועה, נשמע שזה בדיוק העסקים שאני עובדת איתם. אני מלווה עסקי שירות מקומיים עם 1 עד 5 עובדים, שכבר יש להם לקוחות ורוצים פניות באופן קבוע. רוצה שנקבע שיחת התאמה קצרה השבוע?'
-        : 'היי נועה, נשמע שזה בדיוק העסקים שאני עובד איתם. אני מלווה עסקי שירות מקומיים עם 1 עד 5 עובדים, שכבר יש להם לקוחות ורוצים פניות באופן קבוע. רוצה שנקבע שיחת התאמה קצרה השבוע?',
-      why: 'מההתנגדויות בשלב 8: "למי זה מתאים?"',
+        ? 'היי נועה, כן. אני עובדת עם מבוגרים ועם נוער מגיל 16. עם נוער מתחילים בפגישה אחת עם ההורים, ואז ממשיכים רק איתו. רוצה שנקבע שיחת היכרות קצרה?'
+        : 'היי נועה, כן. אני עובד עם מבוגרים ועם נוער מגיל 16. עם נוער מתחילים בפגישה אחת עם ההורים, ואז ממשיכים רק איתו. רוצה שנקבע שיחת היכרות קצרה?',
+      why: 'מ"למי זה מתאים" בסל המוצרים, שלב 3',
       keep: 'למי זה מתאים?',
-      q: 'זה מתאים גם לקוסמטיקאית עם עובדת אחת?',
+      q: 'זה מתאים גם לבן שלי, בן 16?',
     },
   }),
   lead({
@@ -48,6 +49,7 @@ export function freshState() {
       tone: 'friendly',
       custom: {},
       answers: startAnswers(),
+      places: [],
       active: true,
       mail: true,
       tested: false,
@@ -62,7 +64,6 @@ export function freshState() {
     log: [],
     bell: 1,
     made: 0,
-    shark: { connected: false, msgs: [] },
   };
 }
 
@@ -82,7 +83,7 @@ export function saveState(s) {
 
 // New leads the "ליד חדש נכנס" button brings in, in order.
 const NAMES = [
-  ['שירה אברהם', '050-3334455', 'דף: ליווי 90 יום'],
+  ['שירה אברהם', '050-3334455', 'דף: טיפול בחרדה'],
   ['Moshe', '052-9998877', 'קישור ישיר'],
   ['רונית שגב', '054-6667788', 'פלייר'],
   ['גיא נחום', '053-4445566', 'פוסט ממכונת התוכן'],
@@ -115,7 +116,7 @@ export const CASES = [
     { id: 's1', who: 'lead', text: FIRST_TEXT, t: 'אתמול 16:20' },
     { id: 's2', who: 'bot', tag: 'opening', text: `היי דנה, כאן ${USER.business}, העסק של ${USER.fullName}. תודה שכתבת, ההודעה אצלי ואחזור אליך עוד היום.`, t: 'אתמול 16:20' },
   ] }) },
-  { id: 'aidown', icon: 'cloud-off', label: 'הכריש לא זמין', sub: 'תקלה ב-AI: אין הצעה, והשיחה מסומנת למשתמש', say: 'צריך תקציב פרסום כדי להתחיל?', aiDown: true, make: () => lead({ id: 'c-ai', name: 'עומר טל', phone: '050-8080808', status: 'בשיחה', msgs: [
+  { id: 'aidown', icon: 'cloud-off', label: 'הכריש לא זמין', sub: 'תקלה ב-AI: יוצאת רק תשובת ההעברה, והשיחה מסומנת למשתמש', say: 'יש החזר מהביטוח?', aiDown: true, make: () => lead({ id: 'c-ai', name: 'עומר טל', phone: '050-8080808', status: 'בשיחה', msgs: [
     { id: 'a1', who: 'lead', text: FIRST_TEXT, t: '09:58' },
     { id: 'a2', who: 'bot', tag: 'opening', text: `היי עומר, כאן ${USER.business}, העסק של ${USER.fullName}. תודה שכתבת, ההודעה אצלי ואחזור אליך עוד היום.`, t: '09:58' },
   ] }) },

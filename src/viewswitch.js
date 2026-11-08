@@ -10,7 +10,8 @@ import { Logo } from './components.js';
 export const EMBED = new URLSearchParams(location.search).has('embed');
 
 const VIEW_KEY = 'flowbiz-wa-view';
-const HANDOFF_KEY = 'flowbiz-wa-handoff';
+// One handoff per page, so the two mockups never pick up each other's state.
+const HANDOFF_KEY = `flowbiz-wa-handoff-${location.pathname}`;
 const PHONE = { w: 390, h: 844 };
 
 // A phone is a small, touch-first screen, judged by the physical screen so it
@@ -84,7 +85,7 @@ export function ViewToggle({ view, onChange, class: cls = '' }) {
 }
 
 // Desktop-only: the app inside a phone frame, scaled down to fit short screens.
-export function PhonePreview({ onSwitch }) {
+export function PhonePreview({ onSwitch, title = 'בוט וואטסאפ' }) {
   const frame = useRef();
   const [scale, setScale] = useState(1);
   useEffect(() => {
@@ -107,7 +108,7 @@ export function PhonePreview({ onSwitch }) {
       <${Logo} />
       <span class="h-8 w-px bg-line"></span>
       <div class="min-w-0">
-        <p class="truncate text-[16px] font-black leading-tight">בוט וואטסאפ והכריש</p>
+        <p class="truncate text-[16px] font-black leading-tight">${title}</p>
         <p class="truncate text-[12px] font-semibold text-muted">תצוגת מובייל · ${PHONE.w}×${PHONE.h}</p>
       </div>
       <${ViewToggle} view="mobile" onChange=${toDesktop} class="ms-auto" />

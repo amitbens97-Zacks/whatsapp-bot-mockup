@@ -1,12 +1,12 @@
-// Task 4: the WhatsApp bot and the shark. Three places:
-//   1. the shark on the user's WhatsApp, right after the payment screen (shark.js);
-//   2. step 13 "שירות לקוחות אוטומטי", where the bot is set up (step.js);
-//   3. the bot at work: the lead's phone next to the system (leads.js), the home card
+// Task 4: the WhatsApp bot. Two places:
+//   1. step 13 "שירות לקוחות אוטומטי", where the bot is set up (step.js);
+//   2. the bot at work: the leads page with the lead's phone (leads.js), the home card
 //      (home.js) and the settings (settings.js).
+// The shark on the user's WhatsApp is a separate mockup (shark.html, shark-main.js).
 // There is no frame around the product: it opens on step 13, and everything else is
 // reached the way a user reaches it, from the home page. The dashed lead's phone on the
 // leads page and the developer notes are the only parts that belong to the mockup.
-// Link params: ?view=shark|sharkchat|step|live|home|settings, ?screen=opening|link|hours|
+// Link params: ?view=step|live|home|settings, ?screen=opening|link|hours|
 // opening_msg|answers|test|done, ?case=<edge case>, ?user=f, ?embed = phone layout.
 // Shift+D opens the developer notes.
 import { html, render, useState, useEffect, useRef, Icon, cx } from './lib.js';
@@ -14,8 +14,7 @@ import { Logo, PartnerBubble, Progress, TopBar, BottomBar, Status, PrimaryButton
 import { Sheet } from './ui.js';
 import { STEP, PARTS, STEP_SCREENS, USER, g } from './data.js';
 import { loadState, saveState, freshState, newLead, nextId, NOW, CASES } from './state.js';
-import { decide, fillName, openingOf, answerFromDraft, SWITCH_TEXT } from './engine.js';
-import { SharkAfterPay, SharkChat } from './shark.js';
+import { decide, fillName, openingOf, answerFromDraft, definedCount, SWITCH_TEXT } from './engine.js';
 import { Opening, LinkScreen, HoursScreen, MessagesScreen, AnswersScreen, TestScreen, Done } from './step.js';
 import { LiveView } from './leads.js';
 import { Home } from './home.js';
@@ -24,7 +23,7 @@ import { DevPanel } from './devnotes.js';
 import { EMBED, IS_PHONE, readView, saveView, writeHandoff, takeHandoff, applyPhoneViewport, ViewToggle, PhonePreview } from './viewswitch.js';
 
 const params = new URLSearchParams(location.search);
-const VIEWS = ['shark', 'sharkchat', 'step', 'live', 'home', 'settings'];
+const VIEWS = ['step', 'live', 'home', 'settings'];
 const SCREENS = ['opening', ...STEP_SCREENS, 'done'];
 
 function startRoute() {
@@ -32,7 +31,6 @@ function startRoute() {
   if (params.get('case')) return { view: 'live' };
   if (VIEWS.includes(view)) {
     if (view === 'step') return { view, screen: SCREENS.includes(params.get('screen')) ? params.get('screen') : 'opening' };
-    if (view === 'settings') return { view, tab: params.get('tab') === 'shark' ? 'shark' : 'bot' };
     return { view };
   }
   return { view: 'step', screen: 'opening' };
@@ -40,12 +38,12 @@ function startRoute() {
 
 const SHARK_LINE = {
   opening: 'ליד שמקבל תשובה בדקה הראשונה נשאר איתך. נגדיר את זה פעם אחת, והבוט עושה את השאר.',
-  link: 'כל הקישורים של העסק כבר מעודכנים. הקישור הזה הוא גם מה שמראה לך מאיפה כל ליד הגיע.',
+  link: g('סמן איפה להוסיף את הקישור. כל מקור נרשם על הליד, אז תראה מאיפה הוא הגיע.', 'סמני איפה להוסיף את הקישור. כל מקור נרשם על הליד, אז תראי מאיפה הוא הגיע.'),
   hours: 'לקחתי את השעות מ"אני והעסק". אם הן השתנו, עכשיו זה הזמן.',
   opening_msg: 'כתבתי בטון שבחרת בדף המסרים. כדאי לקרוא פעם אחת בקול.',
-  answers: 'כל תשובה שמוגדרת כאן חוסכת לך עוד הודעה. מחיר כדאי להדליק רק אם נוח לך שיופיע בלי שיחה.',
+  answers: 'כל תשובה שמוגדרת כאן חוסכת לך עוד הודעה. ועל מה שלא מוגדר, הליד לא נשאר בלי מענה: הוא מקבל מיד תשובת העברה.',
   test: 'בדיקה אחת מהטלפון וזה באוויר.',
-  home: 'השלב הבא שלך מחכה: הבוט שעונה ללידים. אפשר גם לשאול אותי כל דבר בוואטסאפ.',
+  home: 'השלב הבא שלך מחכה: הבוט שעונה ללידים.',
 };
 
 function App({ view: shellView, onViewChange }) {
@@ -74,7 +72,6 @@ function App({ view: shellView, onViewChange }) {
     const q = new URLSearchParams();
     q.set('view', route.view);
     if (route.view === 'step') q.set('screen', route.screen);
-    if (route.view === 'settings') q.set('tab', route.tab);
     if (EMBED) q.set('embed', '1');
     if (params.get('user')) q.set('user', params.get('user'));
     history.replaceState(null, '', `${location.pathname}?${q}`);
@@ -102,7 +99,6 @@ function App({ view: shellView, onViewChange }) {
     clearTimeout(timers.current.save);
     timers.current.save = setTimeout(() => setSave('saved'), 450);
   };
-  const setShark = (fn) => setState((s) => ({ ...s, shark: fn(s.shark) }));
   const setLead = (id, p) =>
     setState((s) => ({ ...s, leads: s.leads.map((l) => (l.id === id ? { ...l, ...(typeof p === 'function' ? p(l) : p) } : l)) }));
   const addMsg = (id, m) => setLead(id, (l) => ({ msgs: [...l.msgs, { id: nextId(), t: NOW, ...m }] }));
@@ -128,7 +124,7 @@ function App({ view: shellView, onViewChange }) {
       const out = [];
       if (switching) out.push({ who: 'bot', tag: 'switch', text: SWITCH_TEXT });
       if (d.opening) out.push({ who: 'bot', tag: 'opening', text: fillName(openingOf(cur.config, isOpen), lead.name, cur.config) });
-      if (d.reply) out.push({ who: 'bot', tag: d.action === 'auto' ? 'auto' : d.action, text: d.reply });
+      if (d.reply) out.push({ who: 'bot', tag: d.replyTag || (d.action === 'auto' ? 'auto' : d.action), text: d.reply });
       const waits = ['draft', 'human', 'media', 'nodraft'].includes(d.action);
       setLead(id, (l) => ({
         typing: false,
@@ -214,8 +210,7 @@ function App({ view: shellView, onViewChange }) {
 
   const jump = (id) => {
     setDev(false);
-    if (id === 'shark' || id === 'sharkchat' || id === 'live' || id === 'home') go({ view: id });
-    else if (id === 'settings') go({ view: 'settings', tab: 'bot' });
+    if (id === 'live' || id === 'home' || id === 'settings') go({ view: id });
     else go({ view: 'step', screen: id });
   };
   const reset = () => {
@@ -288,29 +283,16 @@ function App({ view: shellView, onViewChange }) {
       <${Icon} name="bell" size=${20} />
       ${waiting > 0 && html`<span class="absolute -end-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">${waiting}</span>`}
     </button>
-    <button type="button" class="rounded-lg p-2 text-muted hover:bg-brand-50 cursor-pointer" aria-label="הגדרות" onClick=${() => go({ view: 'settings', tab: 'bot' })}><${Icon} name="settings" size=${20} /></button>
+    <button type="button" class="rounded-lg p-2 text-muted hover:bg-brand-50 cursor-pointer" aria-label="הגדרות" onClick=${() => go({ view: 'settings' })}><${Icon} name="settings" size=${20} /></button>
     ${!EMBED && html`<${ViewToggle} view=${shellView} onChange=${onViewChange} class="max-md:hidden" />`}
     ${devBtn}
   </header>`;
 
   // ---------- the routes ----------
-  if (route.view === 'shark')
-    return shell(html`${appBar}<main class="thin-scroll relative min-h-0 flex-1 overflow-y-auto">
-      <${SharkAfterPay}
-        key=${state.shark.connected}
-        connected=${state.shark.connected}
-        phoneLayout=${phoneLayout}
-        onConnect=${() => setShark((s) => ({ ...s, connected: true }))}
-        onSkip=${() => (notify('אפשר להוסיף אותו מדף הבית או מההגדרות', 'info'), go({ view: 'home' }))}
-        onChat=${() => go({ view: 'sharkchat' })}
-      />
-    </main>`);
-  if (route.view === 'sharkchat')
-    return shell(html`${appBar}<main class="thin-scroll relative min-h-0 flex-1 overflow-y-auto"><${SharkChat} shark=${state.shark} setShark=${setShark} /></main>`);
   if (route.view === 'home')
     return shell(html`${appBar}<main class="thin-scroll relative min-h-0 flex-1 overflow-y-auto"><${Home} state=${state} go=${go} onLead=${(id) => (act.select(id), go({ view: 'live' }))} /><${PartnerBubble} message=${SHARK_LINE.home} unread=${unread} onRead=${() => setUnread(false)} /></main>`);
   if (route.view === 'settings')
-    return shell(html`${appBar}<main class="thin-scroll relative min-h-0 flex-1 overflow-y-auto"><${Settings} state=${state} tab=${route.tab || 'bot'} go=${go} setCfg=${setCfg} setShark=${setShark} notify=${notify} /></main>`);
+    return shell(html`${appBar}<main class="thin-scroll relative min-h-0 flex-1 overflow-y-auto"><${Settings} state=${state} setCfg=${setCfg} notify=${notify} /></main>`);
   if (route.view === 'live')
     return shell(html`${appBar}<main class="relative min-h-0 flex-1 overflow-hidden"><${LiveView} state=${state} act=${act} phoneLayout=${window.innerWidth < 1024} caseInfo=${caseInfo} onCases=${() => setCasesOpen(true)} onHome=${() => go({ view: 'home' })} /></main>`);
 
@@ -324,7 +306,7 @@ function App({ view: shellView, onViewChange }) {
     if (i > maxPart) setMaxPart(i);
   };
   const cfg = state.config;
-  const onCount = cfg.answers.filter((a) => a.on && (a.a || a.auto)).length;
+  const onCount = definedCount(cfg);
   const reason = screen === 'hours' && !cfg.hours.days.length
     ? 'צריך לבחור לפחות יום אחד'
     : screen === 'answers' && onCount === 0
@@ -335,7 +317,7 @@ function App({ view: shellView, onViewChange }) {
   const next = screen === 'opening' ? STEP_SCREENS[0] : STEP_SCREENS[part + 1] || 'done';
   const body = {
     opening: html`<${Opening} config=${cfg} />`,
-    link: html`<${LinkScreen} notify=${notify} />`,
+    link: html`<${LinkScreen} notify=${notify} config=${cfg} setCfg=${setCfg} />`,
     hours: html`<${HoursScreen} config=${cfg} setCfg=${setCfg} />`,
     opening_msg: html`<${MessagesScreen} config=${cfg} setCfg=${setCfg} />`,
     answers: html`<${AnswersScreen} config=${cfg} setCfg=${setCfg} />`,
@@ -361,7 +343,11 @@ function App({ view: shellView, onViewChange }) {
         check=${screen === 'test'}
         disabled=${!!reason}
         onClick=${() => {
-          if (screen === 'test') setCfg({ done: true });
+          if (screen === 'test') {
+            setCfg({ done: true });
+            const n = (cfg.places || []).length;
+            if (n) notify(n === 1 ? 'הקישור נכנס למקום שסימנת' : `הקישור נכנס ל-${n} המקומות שסימנת`, 'link');
+          }
           toScreen(next);
         }}
       />`}

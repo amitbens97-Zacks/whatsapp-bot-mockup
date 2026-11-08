@@ -8,7 +8,8 @@
 //   6. A lead asking for a person: the bot stops and says so.
 //   7. A first message: the automatic first answer, by the hours.
 //   8. A defined answer that fits by meaning: it goes out alone.
-//   9. Nothing fits: a suggestion from the shark that waits for the user's approval.
+//   9. Nothing fits: the holding answer goes out alone ("שאלה טובה, העברתי לשירות
+//      לקוחות"), once per open question, and the shark's suggestion waits for the user.
 // Matching by meaning is faked here with word lists. Nothing is ever sent as a guess.
 import { DAYS, REPLY_TIMES, DRAFTS, FALLBACK_DRAFT, USER, GENDER, OTHER_BUSINESS, openingTexts, g } from './data.js';
 
@@ -51,12 +52,21 @@ export function matchAnswer(text, answers) {
   let best = null;
   let score = 0;
   for (const a of answers) {
-    if (!a.on || !(a.a || a.auto)) continue;
+    if (a.auto === 'hold' || !a.on || !(a.a || a.auto)) continue;
     const hit = (a.keys || []).filter((k) => text.includes(k)).length;
     if (hit > score) (best = a), (score = hit);
   }
   return best;
 }
+
+// The holding answer, when it is on and the lead has no open question waiting already.
+export const holdOf = (config, lead) => {
+  const h = config.answers.find((a) => a.auto === 'hold');
+  return h && h.on && h.a.trim() && !lead.draft ? h.a.trim() : null;
+};
+
+// Defined answers, without the holding answer.
+export const definedCount = (config) => config.answers.filter((a) => a.auto !== 'hold' && a.on && (a.a || a.auto)).length;
 
 export function draftFor(text) {
   const d = DRAFTS.find((x) => has(text, x.keys)) || FALLBACK_DRAFT;
@@ -115,12 +125,14 @@ export function decide({ config, isOpen, lead, text, kind = 'text', aiDown, ende
     log.push(`יש תשובה מוגדרת, "${ans.q}": יוצאת לבד`);
     return out({ action: 'auto', opening, answer: ans, reply: answerText(ans, config) });
   }
+  const hold = holdOf(config, lead);
+  if (hold) log.push('אין תשובה מוגדרת: "שאלה טובה, העברתי לשירות לקוחות" יוצא לבד');
   if (aiDown) {
-    log.push('אין תשובה מוגדרת והכריש לא זמין: אין הצעה, והשיחה מסומנת למשתמש');
-    return out({ action: 'nodraft', opening });
+    log.push('הכריש לא זמין: אין הצעה, והשיחה מסומנת למשתמש');
+    return out({ action: 'nodraft', opening, reply: hold, replyTag: 'hold' });
   }
-  log.push('אין תשובה מוגדרת: הכריש כותב הצעה שמחכה לאישור', 'התראה למשתמש: פעמון, כרטיס בדף הבית ומייל');
-  return out({ action: 'draft', opening, draft: draftFor(t) });
+  log.push(hold ? 'הכריש כותב הצעה שמחכה לאישור' : 'אין תשובה מוגדרת: הכריש כותב הצעה שמחכה לאישור', 'התראה למשתמש: פעמון, כרטיס בדף הבית ומייל');
+  return out({ action: 'draft', opening, draft: draftFor(t), reply: hold, replyTag: 'hold' });
 }
 
 // "לענות על זה לבד מעכשיו": a draft the user approved becomes a defined answer.

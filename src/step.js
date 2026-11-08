@@ -6,7 +6,7 @@ import { Button, Note, StepHeading, SharkAvatar } from './components.js';
 import { Chips, Field, inputCls, Tag } from './ui.js';
 import { Phone, QrBox, FlowBizAvatar } from './phone.js';
 import { USER, SHORT_LINK, FIRST_TEXT, LINK_PLACES, SOURCES, DAYS, REPLY_TIMES, TONES, PARTS, SUGGESTED, openingTexts, g } from './data.js';
-import { decide, draftFor, fillName, hoursText, openingOf, answerText } from './engine.js';
+import { decide, draftFor, fillName, hoursText, openingOf, answerText, definedCount } from './engine.js';
 import { nextId, NOW } from './state.js';
 
 export function Toggle({ on, onChange, label }) {
@@ -30,12 +30,12 @@ export function Opening({ config }) {
     { id: 1, side: 'out', text: FIRST_TEXT, time: '21:38' },
     { id: 2, side: 'in', text: fillName(openingOf(config, false), previewName, config), time: '21:38' },
     { id: 3, side: 'out', text: 'אם ארצה לבטל, מה קורה?', time: '21:39' },
-    { id: 4, side: 'in', text: 'אפשר לבטל ולקבל החזר מלא עד 14 יום מההרשמה.', time: '21:39' },
+    { id: 4, side: 'in', text: 'אפשר לבטל או להזיז פגישה עד 24 שעות לפני מועדה, בלי תשלום.', time: '21:39' },
   ];
   return html`<div class="mx-auto grid max-w-[1120px] items-center gap-8 px-4 py-6 md:grid-cols-[1.15fr_0.85fr] md:gap-12 md:px-8 md:py-8">
     <div>
       <${StepHeading} n="13" eyebrow="שלב 13 · מגדילים מכירות" title=${['כל ליד מקבל תשובה ', 'מיד', '']} />
-      <p class="mb-6 max-w-[48ch] text-[18px] text-ink">הבוט עונה בשם העסק בוואטסאפ: מענה ראשוני תוך שניות, ותשובות שירות שקבעת מראש. כל שאלה אחרת מחכה לאישור שלך, עם הצעה מוכנה מהכריש.</p>
+      <p class="mb-6 max-w-[48ch] text-[18px] text-ink">הבוט עונה בשם העסק בוואטסאפ: מענה ראשוני תוך שניות, ותשובות שירות שקבעת מראש. על כל שאלה אחרת הליד מקבל מיד תשובת העברה, והתשובה עצמה מחכה לאישור שלך, עם הצעה מוכנה מהכריש.</p>
       <div class="flex flex-col gap-2 border-t border-line pt-4 text-[15px]">
         <p class="flex flex-wrap items-center gap-x-2 gap-y-1"><${Icon} name="list" size=${17} class="text-brand-600" /><b>החלקים:</b> ${PARTS.join(' · ')}</p>
         <p class="flex items-center gap-2"><${Icon} name="clock" size=${17} class="text-brand-600" /><b>זמן:</b> כ-20 דקות</p>
@@ -44,7 +44,7 @@ export function Opening({ config }) {
     </div>
     <div class="relative flex justify-center pb-6">
       <${Phone} class="h-[420px] w-[280px] rotate-[1.2deg]" name="FlowBiz" sub="חשבון עסקי" avatar=${html`<${FlowBizAvatar} />`} msgs=${msgs} />
-      <span class="hand absolute bottom-0 left-2 rotate-[-4deg] whitespace-nowrap text-[26px]">${g('גם כשאתה בפגישה', 'גם כשאת בפגישה')}</span>
+      <span class="hand absolute bottom-0 left-2 rotate-[-4deg] whitespace-nowrap text-[26px]">${g('גם כשאתה באמצע טיפול', 'גם כשאת באמצע טיפול')}</span>
     </div>
   </div>`;
 }
@@ -72,24 +72,40 @@ export function LinkPanel({ notify, compact }) {
   </section>`;
 }
 
-export function LinkScreen({ notify }) {
+// Where the link goes. Nothing changes by itself: only the places the user marks.
+export function PlacesForm({ config, setCfg, inSettings }) {
+  const on = config.places || [];
+  const flip = (id) => setCfg({ places: on.includes(id) ? on.filter((x) => x !== id) : [...on, id] });
+  const all = on.length === LINK_PLACES.length;
+  return html`<section class="fb-panel !p-4 md:!p-5">
+    <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
+      <h2 class="fb-h3">איפה להוסיף את הקישור?</h2>
+      <button type="button" class="text-[14px] font-bold text-brand-600 underline underline-offset-2 cursor-pointer" onClick=${() => setCfg({ places: all ? [] : LINK_PLACES.map((p) => p.id) })}>${all ? 'לבטל הכול' : 'לסמן הכול'}</button>
+    </div>
+    <p class="mb-3 text-[14px] text-muted">${inSettings ? 'רק המקומות המסומנים משתנים. מה שלא מסומן נשאר כמו שהוא.' : 'רק המקומות שסימנת משתנים, בסיום השלב. אפשר לשנות אחר כך בהגדרות.'}</p>
+    <ul class="grid gap-2 sm:grid-cols-2">
+      ${LINK_PLACES.map((p) => {
+        const checked = on.includes(p.id);
+        return html`<li key=${p.id}>
+          <label class=${cx('flex h-full cursor-pointer items-start gap-2.5 rounded-xl border-[1.5px] bg-white p-2.5', checked ? 'border-brand-600 bg-brand-50' : 'border-line hover:border-brand-300')}>
+            <input type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 accent-brand-600" checked=${checked} onChange=${() => flip(p.id)} />
+            <span class="mt-0.5 text-brand-600"><${Icon} name=${p.icon} size=${18} /></span>
+            <span class="min-w-0"><b class="block text-[15px]">${p.label}</b><small class="block text-[13px] leading-snug text-muted">${p.sub}</small></span>
+          </label>
+        </li>`;
+      })}
+    </ul>
+  </section>`;
+}
+
+export function LinkScreen({ notify, config, setCfg }) {
   const msgs = [{ id: 1, side: 'out', text: FIRST_TEXT, time: NOW }];
   return html`<div class="mx-auto max-w-[1120px] px-4 py-5 md:px-8 md:py-6">
     <${StepHeading} n="1" eyebrow="חלק 1 מתוך 5 · הקישור שלך" title=${['קישור אחד, וכל פנייה ', 'מגיעה אליך', '']} sub="לידים כותבים למספר של FlowBiz, והקישור הזה הוא מה שמחבר אותם לעסק שלך." />
     <div class="grid gap-5 md:grid-cols-[1.25fr_0.75fr]">
       <div class="flex min-w-0 flex-col gap-4">
         <${LinkPanel} notify=${notify} />
-        <section class="fb-panel !p-4 md:!p-5">
-          <h2 class="fb-h3 mb-2">נכנס לבד למקומות האלה</h2>
-          <ul class="grid gap-x-5 gap-y-2.5 sm:grid-cols-2">
-            ${LINK_PLACES.map(
-              (p) => html`<li key=${p.label} class="flex items-start gap-2.5">
-                <span class="mt-0.5 text-brand-600"><${Icon} name=${p.icon} size=${19} /></span>
-                <span class="min-w-0"><b class="block text-[15px]">${p.label}</b><small class="block text-[13px] leading-snug text-muted">${p.sub}</small></span>
-              </li>`,
-            )}
-          </ul>
-        </section>
+        <${PlacesForm} config=${config} setCfg=${setCfg} />
       </div>
       <div class="flex flex-col items-center gap-2 max-md:hidden">
         <${Phone} class="h-[300px] w-[260px]" name="FlowBiz" sub="חשבון עסקי" avatar=${html`<${FlowBizAvatar} />`} msgs=${msgs} />
@@ -210,14 +226,24 @@ export function AnswersForm({ config, setCfg }) {
   const [q, setQ] = useState('');
   const [a, setA] = useState('');
   const list = config.answers;
+  const hold = list.find((x) => x.auto === 'hold');
+  const defined = list.filter((x) => x.auto !== 'hold');
   const patch = (id, p) => setCfg({ answers: list.map((x) => (x.id === id ? { ...x, ...p } : x)) });
   const add = (o) => setCfg({ answers: [...list, { own: true, on: true, ...o }] });
   const words = (s) => s.replace(/[?.,!]/g, ' ').split(/\s+/).filter((w) => w.length > 2);
   const offers = SUGGESTED.filter((s) => !list.some((x) => x.id === s.id || x.q === s.q));
   return html`<div class="grid items-start gap-5 md:grid-cols-[1.4fr_0.6fr]">
-    <ul class="flex min-w-0 flex-col gap-2.5">
-      ${list.map((x) => html`<${AnswerRow} key=${x.id} ans=${x} config=${config} onChange=${(p) => patch(x.id, p)} onRemove=${() => setCfg({ answers: list.filter((y) => y.id !== x.id) })} />`)}
-    </ul>
+    <div class="flex min-w-0 flex-col gap-4">
+      <ul class="flex flex-col gap-2.5">
+        ${defined.map((x) => html`<${AnswerRow} key=${x.id} ans=${x} config=${config} onChange=${(p) => patch(x.id, p)} onRemove=${() => setCfg({ answers: list.filter((y) => y.id !== x.id) })} />`)}
+      </ul>
+      ${hold &&
+      html`<section>
+        <h3 class="mb-1 text-[16px] font-bold">כשאין תשובה מוגדרת</h3>
+        <p class="mb-2 text-[13.5px] text-muted">התשובה הזו יוצאת לבד מיד, פעם אחת לכל שאלה פתוחה. ההצעה של הכריש מחכה לאישור שלך כרגיל.</p>
+        <ul><${AnswerRow} ans=${{ ...hold, q: 'תשובת העברה' }} config=${config} onChange=${(p) => patch(hold.id, p)} /></ul>
+      </section>`}
+    </div>
     <div class="flex min-w-0 flex-col gap-3">
       <section class="fb-panel !p-3.5">
         <h2 class="fb-h3 mb-2">תשובה נוספת</h2>
@@ -237,9 +263,9 @@ export function AnswersForm({ config, setCfg }) {
 }
 
 export function AnswersScreen({ config, setCfg }) {
-  const n = config.answers.filter((x) => x.on && (x.a || x.auto)).length;
+  const n = definedCount(config);
   return html`<div class="mx-auto max-w-[1120px] px-4 py-5 md:px-8 md:py-6">
-    <${StepHeading} n="4" eyebrow="חלק 4 מתוך 5 · תשובות אוטומטיות" title=${['מה יוצא ', 'לבד', '?']} sub=${`כל מה שמוגדר כאן הבוט עונה לבד, גם כשהשאלה מנוסחת אחרת. כרגע ${n} תשובות פעילות. מה שלא מוגדר מגיע אליך עם הצעה מהכריש.`} />
+    <${StepHeading} n="4" eyebrow="חלק 4 מתוך 5 · תשובות אוטומטיות" title=${['מה יוצא ', 'לבד', '?']} sub=${`כל מה שמוגדר כאן הבוט עונה לבד, גם כשהשאלה מנוסחת אחרת. כרגע ${n} תשובות פעילות. על כל שאלה אחרת הליד מקבל מיד תשובת העברה, והיא מגיעה אליך עם הצעה מהכריש.`} />
     <${AnswersForm} config=${config} setCfg=${setCfg} />
   </div>`;
 }
@@ -249,7 +275,7 @@ export function AnswersScreen({ config, setCfg }) {
 const TEST_TRIES = [
   { id: 'first', text: FIRST_TEXT, label: 'הודעה ראשונה מהקישור' },
   { id: 'hours', text: 'מה שעות הפעילות?', label: 'שאלת שירות' },
-  { id: 'other', text: 'זה מתאים גם לקוסמטיקאית?', label: 'שאלה בלי תשובה מוגדרת' },
+  { id: 'other', text: 'זה מתאים גם לבן שלי, בן 16?', label: 'שאלה בלי תשובה מוגדרת' },
 ];
 
 export function TestScreen({ config, onPassed, phoneLayout }) {
@@ -277,7 +303,7 @@ export function TestScreen({ config, onPassed, phoneLayout }) {
   const checks = [
     ['opening', 'המענה הראשוני הגיע'],
     ['auto', 'תשובה אוטומטית יצאה לבד'],
-    ['draft', 'שאלה אחרת עברה לאישור'],
+    ['draft', 'שאלה אחרת: תשובת העברה, והצעה לאישור'],
   ];
   return html`<div class="mx-auto max-w-[1120px] px-4 py-5 md:px-8 md:py-6">
     <${StepHeading} n="5" eyebrow="חלק 5 מתוך 5 · בדיקה" title=${['בודקים ', 'מהטלפון שלך', '']} sub="כותבים לבוט כמו ליד, ורואים מה קורה. שיחת בדיקה לא נכנסת ללידים." />
@@ -316,12 +342,14 @@ export function Done({ config }) {
     const t = setTimeout(() => confetti('chapter'), 200);
     return () => clearTimeout(t);
   }, []);
-  const n = config.answers.filter((x) => x.on && (x.a || x.auto)).length;
+  const n = definedCount(config);
+  const places = LINK_PLACES.filter((p) => (config.places || []).includes(p.id));
   const rows = [
     ['link', 'הקישור', html`<b dir="ltr">${SHORT_LINK}</b>`],
+    ['map-pin', 'נכנס ל', places.length ? places.map((p) => p.label).join(', ') : 'לא סימנת מקומות. אפשר בהגדרות'],
     ['clock', 'שעות פעילות', hoursText(config.hours)],
     ['zap', 'יוצא לבד', `מענה ראשוני ועוד ${n} תשובות`],
-    ['shield-check', 'באישור שלך', 'כל מה שלא הוגדר'],
+    ['shield-check', 'באישור שלך', 'כל השאר, אחרי תשובת העברה'],
   ];
   return html`<div class="mx-auto grid max-w-[1000px] items-center gap-8 px-4 py-6 md:grid-cols-[1.2fr_0.8fr] md:px-8 md:py-10">
     <div>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>בוט וואטסאפ · FlowBiz</title>
-    <meta name="description" content="מוק-אפ של משימה 4: הבוט של העסק על מספר FlowBiz, שלב שירות לקוחות אוטומטי, והכריש בוואטסאפ של המשתמש." />
+    <meta name="description" content="מוק-אפ של משימה 4: הבוט של העסק על מספר FlowBiz, ושלב 13 שירות לקוחות אוטומטי." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Rubik:wght@400;500;700;800;900&family=Amatic+SC:wght@700&display=swap" rel="stylesheet" />
@@ -135,7 +135,6 @@
       @keyframes waType { 0%, 60%, 100% { transform: none; opacity: .4; } 30% { transform: translateY(-3px); opacity: 1; } }
       .wa-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #667781; animation: waType 1.1s infinite; }
       .wa-dot:nth-child(2) { animation-delay: .15s; } .wa-dot:nth-child(3) { animation-delay: .3s; }
-      /* The demo strip above the product: not part of the product itself. */
       .lp-option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 14px; border: 1.5px solid #e7e1d5; background: #fff; text-align: start; cursor: pointer; }
       .lp-option:hover { border-color: #8fb3ef; background: #f6f9ff; }
       details > summary::-webkit-details-marker { display: none; }
@@ -178,7 +177,7 @@
       // makes the browser always fetch the current modules.
       (function () {
         var v = Date.now(), imports = {};
-        ['components', 'data', 'devnotes', 'engine', 'home', 'leads', 'lib', 'main', 'phone', 'settings', 'shark', 'state', 'step', 'ui', 'viewswitch'].forEach(function (m) {
+        ['components', 'data', 'devnotes', 'engine', 'home', 'leads', 'lib', 'main', 'phone', 'settings', 'state', 'step', 'ui', 'viewswitch'].forEach(function (m) {
           var url = new URL('./src/' + m + '.js', location.href).href;
           imports[url] = url + '?v=' + v;
         });
