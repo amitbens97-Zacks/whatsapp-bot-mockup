@@ -5,7 +5,8 @@ import { html, useState, useRef, useEffect, Icon, PencilCheck, cx, confetti, mon
 import { Button, Mark, SharkAvatar } from './components.js';
 import { Tag } from './ui.js';
 import { Phone, QrBox, SharkPic } from './phone.js';
-import { USER, SHARK_ASKS, SHARK_SUPPORT, SHARK_DISTRESS, SHARK_FALLBACK, SHARK_CONTACT, SHARK_CODE, PLANS, GENDER, g } from './data.js';
+import { sharkReply } from './shark-brain.js';
+import { USER, SHARK_ASKS, SHARK_SUPPORT, SHARK_CONTACT, SHARK_CODE, PLANS, GENDER, g } from './data.js';
 
 let seq = 500;
 const nextId = () => `s${++seq}`;
@@ -182,26 +183,23 @@ export function SharkChat({ shark, setShark, onBack }) {
     }));
   }, []);
 
-  const ask = (q, a) => {
+  // Every message is read and answered on its own, with what the shark said last as context.
+  const ask = (q) => {
+    const sharks = shark.msgs.filter((m) => m.who === 'shark');
+    const last = sharks[sharks.length - 1] || {};
+    const r = sharkReply(q, { offer: last.offer, open: last.open, topic: last.topic, n: sharks.length });
     setShark((s) => ({ ...s, msgs: [...s.msgs, { id: nextId(), who: 'me', text: q }] }));
     setTyping(true);
     clearTimeout(t.current);
     t.current = setTimeout(() => {
       setTyping(false);
-      setShark((s) => ({ ...s, msgs: [...s.msgs, { id: nextId(), who: 'shark', text: a }] }));
-    }, 1100);
+      setShark((s) => ({ ...s, msgs: [...s.msgs, { id: nextId(), who: 'shark', text: r.text, offer: r.offer, open: r.open, topic: r.topic }] }));
+    }, 900 + Math.min(r.text.length * 4, 900));
   };
-  const answerOf = (x) => (GENDER === 'f' && x.aF) || x.a;
-  // Free text: distress first, then an exact question, then the support keys.
-  const free = (text) => {
-    const has = (keys) => keys.some((k) => text.includes(k));
-    if (has(SHARK_DISTRESS.keys)) return ask(text, SHARK_DISTRESS.a);
-    const hit = [...SHARK_ASKS, ...SHARK_SUPPORT].find((x) => x.q === text) || SHARK_SUPPORT.find((x) => has(x.keys));
-    ask(text, hit ? answerOf(hit) : SHARK_FALLBACK);
-  };
+  const free = ask;
   const tries = (list, tag) => html`<div class="flex flex-col gap-2">
     ${list.map(
-      (x) => html`<button key=${x.q} type="button" class="lp-option !py-2" onClick=${() => ask(x.q, answerOf(x))}>
+      (x) => html`<button key=${x.q} type="button" class="lp-option !py-2" onClick=${() => ask(x.q)}>
         <span class="min-w-0 flex-1 text-[15px] font-semibold">${x.q}</span><${Tag}>${tag || x.from}<//>
       </button>`,
     )}
