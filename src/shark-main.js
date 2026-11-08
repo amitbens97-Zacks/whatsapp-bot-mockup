@@ -1,4 +1,6 @@
 // A separate mockup: the shark on the user's own WhatsApp. It is not part of step 13.
+// It opens on the window that shows right after the payment; the rest is reached from
+// there, or from the developer notes (Shift+D), which also go back to before the payment.
 //   1. The home page before the payment: the shark's card is locked.
 //   2. The paywall (as in the system today) after step 2.
 //   3. Right after the payment: a celebration window over the home page, to add the
@@ -14,15 +16,17 @@ import { EMBED, IS_PHONE, readView, saveView, writeHandoff, takeHandoff, applyPh
 
 const params = new URLSearchParams(location.search);
 const VIEWS = ['home', 'pay', 'chat', 'settings'];
-const STORE = `flowbiz-shark-state-v1-${GENDER}`;
+const STORE = `flowbiz-shark-state-v2-${GENDER}`;
 
 const fresh = () => ({ paid: false, connected: false, welcome: false, msgs: [] });
+// Where the mockup opens: the payment just went through, and the window is up.
+const afterPay = () => ({ ...fresh(), paid: true, welcome: true });
 function load() {
   const s = (() => {
     try {
-      return JSON.parse(sessionStorage.getItem(STORE)) || fresh();
+      return JSON.parse(sessionStorage.getItem(STORE)) || afterPay();
     } catch {
-      return fresh();
+      return afterPay();
     }
   })();
   if (params.get('paid') === '1') s.paid = true;
@@ -90,7 +94,7 @@ function DevPanel({ open, onClose, onJump, onReset }) {
             ([id, name, sub]) => html`<button key=${id} type="button" role="radio" aria-checked=${GENDER === id} onClick=${() => GENDER !== id && setDemoGender(id)} class=${cx('rounded-lg border px-3 py-1.5 text-start cursor-pointer', GENDER === id ? 'border-brand-600 bg-brand-100 text-brand-600' : 'border-brand-200 bg-white text-brand-900')}><b class="block text-[14px]">${name}</b><small class="text-[12px]">${sub}</small></button>`,
           )}
         </div>
-        <button type="button" class="mt-2 text-[13px] font-bold text-brand-600 underline underline-offset-2 cursor-pointer" onClick=${onReset}>להתחיל מחדש, לפני התשלום</button>
+        <button type="button" class="mt-2 text-[13px] font-bold text-brand-600 underline underline-offset-2 cursor-pointer" onClick=${onReset}>להתחיל מחדש, מהחלונית</button>
       </section>
       <section class="mb-5 rounded-xl border border-dashed border-brand-300 bg-brand-50/60 p-3">
         <h3 class="mb-2 font-bold text-brand-900">מעבר מהיר בין המסכים</h3>
@@ -219,7 +223,7 @@ function App({ view: shellView, onViewChange }) {
       onChat=${() => (patch({ welcome: false }), go('chat'))}
     />`}
     <${Toast} toast=${toast} />
-    <${DevPanel} open=${dev} onClose=${() => setDev(false)} onJump=${jump} onReset=${() => (setS(fresh()), go('home'), setDev(false), notify('התחלנו מחדש, לפני התשלום', 'rotate-ccw'))} />
+    <${DevPanel} open=${dev} onClose=${() => setDev(false)} onJump=${jump} onReset=${() => (setS(afterPay()), go('home'), setDev(false))} />
   </div>`;
 }
 
