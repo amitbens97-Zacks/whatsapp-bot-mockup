@@ -346,10 +346,12 @@ export function PartnerBubble({ message, unread, onRead, action, mood = 'calm' }
     } catch {}
   };
 
+  // Only the round shark shows. On hover (or keyboard focus) a dark tab with the name
+  // slides out of it to the left, as in Amit's recording of 8.11.2026.
   const place = pos ? { left: `${pos.l}px`, top: `${pos.t}px` } : { right: '20px', bottom: '20px' };
   return html`<div
     ref=${el}
-    class=${cx('fb-partner no-print !py-1.5 !pe-4 !ps-1.5 max-md:!p-1', state === 'dragging' && 'is-dragging', state === 'blocked' && 'is-dragging is-blocked')}
+    class=${cx('fb-shark no-print', open && 'is-open', state === 'dragging' && 'is-dragging', state === 'blocked' && 'is-dragging is-blocked')}
     style=${place}
     role="button"
     tabindex="0"
@@ -359,9 +361,8 @@ export function PartnerBubble({ message, unread, onRead, action, mood = 'calm' }
     onPointerUp=${up}
     onKeyDown=${(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), e.stopPropagation(), toggle())}
   >
-    <${SharkAvatar} size=${46} mood=${mood} />
-    <span class="max-md:hidden"><b>${PARTNER.name}</b><small>${unread ? 'יש לי הצעה' : PARTNER.role}</small></span>
-    ${unread && html`<span class="fb-badge" style="left:auto; right:36px">1</span>`}
+    <span class="fb-shark-label" aria-hidden="true">${PARTNER.name}</span>
+    <span class="fb-shark-face"><${SharkAvatar} size=${68} mood=${mood} /></span>
     ${open &&
     html`<div
       class=${cx('absolute w-[min(340px,80vw)] cursor-auto', side.y === 'up' ? 'bottom-[calc(100%+16px)]' : 'top-[calc(100%+16px)]', side.x === 'right' ? 'right-0' : 'left-0')}
